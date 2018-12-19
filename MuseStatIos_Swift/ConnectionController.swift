@@ -261,8 +261,19 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         var request = URLRequest(url: url)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
-        let postString = "{\"key1\":\"shit\", \"key2\":\"fuck\"}"
-        request.httpBody = postString.data(using: .utf8)
+ 
+		// https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
+
+        //let postString = "{\"key1\":\"shit\", \"key2\":\"fuck\"}"
+        // request.httpBody = postString.data(using: .utf8)
+
+		// https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
+		let json: [String: Any] = ["title": "ABC",
+								   "dict": ["1":"First", "2":"Second"]]
+		let jsonData = try? JSONSerialization.data(withJSONObject: json)
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		request.httpBody = jsonData
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {                                                 // check for fundamental networking error
                 print("error=\(error)")
