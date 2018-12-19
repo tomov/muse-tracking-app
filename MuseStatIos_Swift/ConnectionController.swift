@@ -255,6 +255,30 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         
         self.muse.runAsynchronously()
     }
+
+    func postRequest() {
+        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
+        var request = URLRequest(url: url)
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = "POST"
+        let postString = "{\"key1\":\"shit\", \"key2\":\"fuck\"}"
+        request.httpBody = postString.data(using: .utf8)
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {                                                 // check for fundamental networking error
+                print("error=\(error)")
+                return
+            }
+
+            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {           // check for http errors
+                print("statusCode should be 200, but is \(httpStatus.statusCode)")
+                print("response = \(response)")
+            }
+
+            let responseString = String(data: data, encoding: .utf8)
+            print("responseString = \(responseString)")
+        }
+        task.resume()
+    }
     
     func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
         if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
@@ -267,6 +291,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
             //  Lines below are not exactly correct
             //print("Alpha: \(packet?.values()[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
             //print("%5.2f %5.2f %5.2f %5.2f", packet?.values() ?? 0)
+
+            //self.postRequest()
         }
         
         // TODO: Add info for other brainwaves
@@ -309,6 +335,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
     
     @IBAction func scan(_ sender: AnyObject) {
+        self.postRequest()
+
         //SimpleController().scan(AnyObject)
         self.manager.startListening()
         DispatchQueue.main.async{
