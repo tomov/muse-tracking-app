@@ -256,7 +256,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         self.muse.runAsynchronously()
     }
 
-    func postRequest() {
+    func testPostRequest() {
         let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
         //let url = URL(string: "http://127.0.0.1:5000/log")!
         var request = URLRequest(url: url)
@@ -300,30 +300,97 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         }
         task.resume()
     }
-    
-    func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
-        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
-            
-            if let info = packet?.values() {
-                //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-                print("Alpha: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
-            }
-            
-            //  Lines below are not exactly correct
-            //print("Alpha: \(packet?.values()[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-            //print("%5.2f %5.2f %5.2f %5.2f", packet?.values() ?? 0)
 
-            //self.postRequest()
-        }
-        
-        // TODO: Add info for other brainwaves
-        if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
-            
-            if let info = packet?.values() {
-                //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-                print("Beta: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
+    // Post a EEG request, with one value for each channel, e.g. alpha band or isGood values
+    //
+    func postRequestEeg(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+
+        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!  // TODO const
+        //let url = URL(string: "http://127.0.0.1:5000/log")!
+
+        var request = URLRequest(url: url)
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = "POST"
+ 
+		// https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
+		// https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
+        let json: [String: Any] = ["table": table,
+                                   "subject_id": subject_id,
+                                   "timestamp": packet?.timestamp(),
+                                   "eeg1": packet?.getEegChannelValue(IXNEeg.EEG1),
+                                   "eeg2": packet?.getEegChannelValue(IXNEeg.EEG2),
+                                   "eeg3": packet?.getEegChannelValue(IXNEeg.EEG3),
+                                   "eeg4": packet?.getEegChannelValue(IXNEeg.EEG4),
+                                   "aux1": packet?.getEegChannelValue(IXNEeg.AUXLEFT),
+                                   "aux2": packet?.getEegChannelValue(IXNEeg.AUXRIGHT)]
+		let jsonData = try? JSONSerialization.data(withJSONObject: json)
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		request.httpBody = jsonData
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {                                                 // check for fundamental networking error
+                print("error=\(error)")
+                return
             }
+
+            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {           // check for http errors
+                print("statusCode should be 200, but is \(httpStatus.statusCode)")
+                print("response = \(response)")
+            }
+
+            let responseString = String(data: data, encoding: .utf8)
+            print("responseString = \(responseString)")
         }
+        task.resume()
+    }
+
+    func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
+
+        var table = "wtf..."
+
+        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute {
+            table = "alpha"
+        } else if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute {
+            table = "beta"
+        } else if packet?.packetType() == IXNMuseDataPacketType.deltaAbsolute {
+            table = "delta"
+        } else if packet?.packetType() == IXNMuseDataPacketType.thetaAbsolute {
+            table = "theta"
+        } else if packet?.packetType() == IXNMuseDataPacketType.gammaAbsolute {
+            table = "gamma"
+        } else if packet?.packetType() == IXNMuseDataPacketType.isGood {
+            table = "good"
+        } else if packet?.packetType() == IXNMuseDataPacketType.hsiPrecision {
+            table = "hsi"
+        }
+
+        postRequestEeg(packet: packet, table: table, subject_id: -1)
+
+        
+
+
+       // if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
+       //     
+       //     if let info = packet?.values() {
+       //         //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
+       //         print("Alpha: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
+       //     }
+       //     
+       //     //  Lines below are not exactly correct
+       //     //print("Alpha: \(packet?.values()[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
+       //     //print("%5.2f %5.2f %5.2f %5.2f", packet?.values() ?? 0)
+
+       //     //self.postRequest()
+       // }
+       // 
+       // // TODO: Add info for other brainwaves
+       // if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
+       //     
+       //     if let info = packet?.values() {
+       //         //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
+       //         print("Beta: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
+       //     }
+       // }
     }
     
     func receive(_ packet: IXNMuseArtifactPacket, muse: IXNMuse?) {
@@ -356,7 +423,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
     
     @IBAction func scan(_ sender: AnyObject) {
-        self.postRequest()
+        //self.testPostRequest()
 
         //SimpleController().scan(AnyObject)
         self.manager.startListening()
