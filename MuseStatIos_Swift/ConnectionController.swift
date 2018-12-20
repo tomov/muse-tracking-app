@@ -257,7 +257,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
 
     func postRequest() {
-        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
+        //let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
+        let url = URL(string: "http://127.0.0.1:5000/log")!
         var request = URLRequest(url: url)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
@@ -268,8 +269,17 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         // request.httpBody = postString.data(using: .utf8)
 
 		// https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
-		let json: [String: Any] = ["title": "ABC",
-								   "dict": ["1":"First", "2":"Second"]]
+		//let json: [String: Any] = ["title": "ABC",
+	    //							   "dict": ["1":"First", "2":"Second"]]	
+        let json: [String: Any] = ["table": "alpha",
+                                   "subject_id": 34,
+                                   "timestamp": 234234,
+                                   "eeg1": 123,
+                                   "eeg2": 234,
+                                   "eeg3": 345,
+                                   "eeg4": 456,
+                                   "aux1": 1000,
+                                   "aux2": 2000]
 		let jsonData = try? JSONSerialization.data(withJSONObject: json)
 		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 		request.httpBody = jsonData
