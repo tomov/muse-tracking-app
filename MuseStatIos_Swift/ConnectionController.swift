@@ -257,8 +257,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
 
     func postRequest() {
-        //let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
-        let url = URL(string: "http://127.0.0.1:5000/log")!
+        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
+        //let url = URL(string: "http://127.0.0.1:5000/log")!
         var request = URLRequest(url: url)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
