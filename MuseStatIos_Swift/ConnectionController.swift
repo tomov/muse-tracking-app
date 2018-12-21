@@ -246,12 +246,17 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         self.muse.register(self)
         self.muse.register(self, type: IXNMuseDataPacketType.artifacts)
         self.muse.register(self, type: IXNMuseDataPacketType.alphaAbsolute)
-        
-        // TODO: Add register for other brainwaves
         self.muse.register(self, type: IXNMuseDataPacketType.betaAbsolute)
+        self.muse.register(self, type: IXNMuseDataPacketType.deltaAbsolute)
+        self.muse.register(self, type: IXNMuseDataPacketType.thetaAbsolute)
+        self.muse.register(self, type: IXNMuseDataPacketType.gammaAbsolute)
+        self.muse.register(self, type: IXNMuseDataPacketType.isGood)
+        self.muse.register(self, type: IXNMuseDataPacketType.hsiPrecision)
+        self.muse.register(self, type: IXNMuseDataPacketType.accelerometer)
+        self.muse.register(self, type: IXNMuseDataPacketType.gyro)
         
         
-        //self.muse.register(self, type: IXNMuseDataPacketType.eeg)
+        //self.muse.register(self, type: IXNMuseDataPacketType.eeg) <-- RAW eeg data DO NOT USE -- too much
         
         self.muse.runAsynchronously()
     }
@@ -301,9 +306,9 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         task.resume()
     }
 
-    // Post a EEG request, with one value for each channel, e.g. alpha band or isGood values
-    //
-    func postRequestEeg(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+    func postRequest(json: Dictionary<String, Any>) {
+		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
+		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
 
         let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!  // TODO const
         //let url = URL(string: "http://127.0.0.1:5000/log")!
@@ -312,17 +317,6 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
  
-		// https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
-		// https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": packet?.timestamp(),
-                                   "eeg1": packet?.getEegChannelValue(IXNEeg.EEG1),
-                                   "eeg2": packet?.getEegChannelValue(IXNEeg.EEG2),
-                                   "eeg3": packet?.getEegChannelValue(IXNEeg.EEG3),
-                                   "eeg4": packet?.getEegChannelValue(IXNEeg.EEG4),
-                                   "aux1": packet?.getEegChannelValue(IXNEeg.AUXLEFT),
-                                   "aux2": packet?.getEegChannelValue(IXNEeg.AUXRIGHT)]
 		let jsonData = try? JSONSerialization.data(withJSONObject: json)
 		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 		request.httpBody = jsonData
@@ -344,30 +338,88 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         task.resume()
     }
 
+    // Post a EEG request, with one value for each channel, e.g. alpha band or isGood values
+    //
+    func postRequestEeg(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+
+        let json: [String: Any] = ["table": table,
+                                   "subject_id": subject_id,
+                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
+                                   "eeg1": packet?.getEegChannelValue(IXNEeg.EEG1),
+                                   "eeg2": packet?.getEegChannelValue(IXNEeg.EEG2),
+                                   "eeg3": packet?.getEegChannelValue(IXNEeg.EEG3),
+                                   "eeg4": packet?.getEegChannelValue(IXNEeg.EEG4),
+                                   "aux1": packet?.getEegChannelValue(IXNEeg.AUXLEFT),
+                                   "aux2": packet?.getEegChannelValue(IXNEeg.AUXRIGHT)]
+        postRequest(json: json)
+    }
+
+    func postRequestAccelerometer(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+        let json: [String: Any] = ["table": table,
+                                   "subject_id": subject_id,
+                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
+                                   "x": packet?.getAccelerometerValue(IXNAccelerometer.X),
+                                   "y": packet?.getAccelerometerValue(IXNAccelerometer.Y),
+                                   "z": packet?.getAccelerometerValue(IXNAccelerometer.Z),
+                                   "fb": packet?.getAccelerometerValue(IXNAccelerometer.forwardBackward),
+                                   "ud": packet?.getAccelerometerValue(IXNAccelerometer.upDown),
+                                   "lr": packet?.getAccelerometerValue(IXNAccelerometer.leftRight)]
+        postRequest(json: json)
+    }
+
+    func postRequestGyro(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+        let json: [String: Any] = ["table": table,
+                                   "subject_id": subject_id,
+                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
+                                   "x": packet?.getGyroValue(IXNGyro.X),
+                                   "y": packet?.getGyroValue(IXNGyro.Y),
+                                   "z": packet?.getGyroValue(IXNGyro.Z),
+                                   "fb": packet?.getGyroValue(IXNGyro.forwardBackward),
+                                   "ud": packet?.getGyroValue(IXNGyro.upDown),
+                                   "lr": packet?.getGyroValue(IXNGyro.leftRight)]
+        postRequest(json: json)
+    }
+
+    func postRequestArtifact(packet: IXNMuseArtifactPacket?, table: String?, subject_id: Int?) {
+        let json: [String: Any] = ["table": table,
+                                   "subject_id": subject_id,
+                                   //"timestamp": packet?.timestamp / 1000000, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
+                                   "timestamp": NSDate().timeIntervalSince1970,
+                                   "headband": packet?.headbandOn,
+                                   "blink": packet?.blink,
+                                   "jaw": packet?.jawClench]
+        postRequest(json: json)
+    }
+
     func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
 
-        var table = "wtf..."
-
         if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute {
-            table = "alpha"
+            postRequestEeg(packet: packet, table: "alpha", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute {
-            table = "beta"
+            postRequestEeg(packet: packet, table: "beta", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.deltaAbsolute {
-            table = "delta"
+            postRequestEeg(packet: packet, table: "delta", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.thetaAbsolute {
-            table = "theta"
+            postRequestEeg(packet: packet, table: "theta", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.gammaAbsolute {
-            table = "gamma"
+            postRequestEeg(packet: packet, table: "gamma", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.isGood {
-            table = "good"
+            postRequestEeg(packet: packet, table: "good", subject_id: -1)
+
         } else if packet?.packetType() == IXNMuseDataPacketType.hsiPrecision {
-            table = "hsi"
+            postRequestEeg(packet: packet, table: "hsi", subject_id: -1)
+
+        } else if packet?.packetType() == IXNMuseDataPacketType.accelerometer {
+            postRequestAccelerometer(packet: packet, table: "accelerometer", subject_id: -1)
+
+        } else if packet?.packetType() == IXNMuseDataPacketType.gyro {
+            postRequestGyro(packet: packet, table: "gyro", subject_id: -1)
         }
-
-        postRequestEeg(packet: packet, table: table, subject_id: -1)
-
-        
-
 
        // if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
        //     
@@ -394,10 +446,12 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
     
     func receive(_ packet: IXNMuseArtifactPacket, muse: IXNMuse?) {
-        if packet.blink && packet.blink != self.isLastBlink {
-            self.log(fmt: "blink detected")
-        }
-        self.isLastBlink = packet.blink
+        //if packet.blink && packet.blink != self.isLastBlink {
+        //    self.log(fmt: "blink detected")
+        //}
+        //self.isLastBlink = packet.blink
+
+        postRequestArtifact(packet: packet, table: "artifact", subject_id: -1)
     }
     
     
