@@ -73,6 +73,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     
     @IBOutlet var tableView: UITableView!
     @IBOutlet var logView: UITextView!
+    @IBOutlet var batteryLevel: UILabel!
+    @IBOutlet var signalQuality: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
