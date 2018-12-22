@@ -459,7 +459,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
                                    //"timestamp": packet.timestamp, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
-                                   "timestamp": NSDate().timeIntervalSince1970 * 1000000,
+                                   "timestamp": NSDate().timeIntervalSince1970 * 1000000, // TODO precise
                                    "headband": packet.headbandOn,
                                    "blink": packet.blink,
                                    "jaw": packet.jawClench]

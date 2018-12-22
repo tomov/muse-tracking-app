@@ -65,6 +65,12 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
                 self!.postRequestAcceleration(acceleration: data!.userAcceleration, table: "acceleration", subject_id: -1) // TODO subj id
             }
         }
+
+        // from https://medium.com/@ashok.nfn/run-tasks-on-background-thread-swift-5d3aec272140
+        let dispatchQueue = DispatchQueue(label: "muse.backgroundLocationDequeueRequests", qos: .background)
+        dispatchQueue.async{
+            self.backgroundDequeueRequests()
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -219,7 +225,7 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
     func postRequestLocation(location: CLLocation?, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": location!.timestamp,
+                                   "timestamp": location!.timestamp.timeIntervalSince1970 * 1000000, // TODO precise
                                    "latitude": location!.coordinate.latitude,
                                    "longitude": location!.coordinate.longitude,
                                    "altitude": location!.altitude]
@@ -229,6 +235,7 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
     func postRequestAcceleration(acceleration: CMAcceleration, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
+                                   "timestamp": NSDate().timeIntervalSince1970 * 1000000, // TODO precise
                                    "x": acceleration.x,
                                    "y": acceleration.y,
                                    "z": acceleration.z]
