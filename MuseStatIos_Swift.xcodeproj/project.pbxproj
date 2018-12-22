@@ -16,6 +16,7 @@
 		22C23A1A1DD0776D00B83272 /* Muse.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 22C23A181DD0776D00B83272 /* Muse.framework */; };
 		22CDAD201DE6889400A531B0 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 22CDAD1F1DE6889400A531B0 /* libc++.tbd */; };
 		22CDAD221DE688B300A531B0 /* ConnectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CDAD211DE688B300A531B0 /* ConnectionController.swift */; };
+		5E8D99FC21CEB37E007CEB71 /* LocationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		22C23A181DD0776D00B83272 /* Muse.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Muse.framework; sourceTree = "<group>"; };
 		22CDAD1F1DE6889400A531B0 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		22CDAD211DE688B300A531B0 /* ConnectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConnectionController.swift; sourceTree = "<group>"; };
+		5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +80,7 @@
 				22C23A0F1DD074C600B83272 /* LaunchScreen.storyboard */,
 				22C23A121DD074C600B83272 /* Info.plist */,
 				229C81701DD172A700D2DDF1 /* MuseStatIos_Swift-Bridging-Header.h */,
+				5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */,
 			);
 			path = MuseStatIos_Swift;
 			sourceTree = "<group>";
@@ -125,6 +128,11 @@
 						DevelopmentTeam = 83HYM26E6D;
 						LastSwiftMigration = 0810;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -168,6 +176,7 @@
 				22CDAD221DE688B300A531B0 /* ConnectionController.swift in Sources */,
 				22C23A071DD074C600B83272 /* AppDelegate.swift in Sources */,
 				229C81731DD172A700D2DDF1 /* SimpleController.m in Sources */,
+				5E8D99FC21CEB37E007CEB71 /* LocationDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
