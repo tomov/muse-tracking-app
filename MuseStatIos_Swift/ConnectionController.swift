@@ -46,10 +46,6 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     // queue for batch sending POST requests
     // one queue for each table (for batch insert on the backend)
     //
-    //var queues = [String: DispatchQueue]()
-    //var pendingJsons = [String: [[String: Any]]]()
-    var pendingJsons = [String: NSMutableArray]()
-
     let queues: [String: DispatchQueue] = ["alpha": DispatchQueue(label: "muse.alphaPendingJsons", attributes: .concurrent),
                                            "beta": DispatchQueue(label: "muse.betaPendingJsons", attributes: .concurrent),
                                            "delta": DispatchQueue(label: "muse.deltaPendingJsons", attributes: .concurrent),
@@ -60,19 +56,16 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                            "accelerometer": DispatchQueue(label: "muse.accelerometerPendingJsons", attributes: .concurrent),
                                            "gyro": DispatchQueue(label: "muse.gyroPendingJsons", attributes: .concurrent),
                                            "artifact": DispatchQueue(label: "muse.artifactPendingJsons", attributes: .concurrent)]
-
-    /*
-    var pendingJsons: [String: [[String: Any]]] = ["alpha": [],
-                                                   "beta": [],
-                                                   "delta": [],
-                                                   "theta": [],
-                                                   "gamma": [],
-                                                   "good": [],
-                                                   "hsi": [],
-                                                   "accelerometer": [],
-                                                   "gyro": [],
-                                                   "artifact": []]
-   */
+    var pendingJsons: [String: NSMutableArray] = ["alpha": NSMutableArray(),
+                                                   "beta": NSMutableArray(),
+                                                   "delta": NSMutableArray(),
+                                                   "theta": NSMutableArray(),
+                                                   "gamma": NSMutableArray(),
+                                                   "good": NSMutableArray(),
+                                                   "hsi": NSMutableArray(),
+                                                   "accelerometer": NSMutableArray(),
+                                                   "gyro": NSMutableArray(),
+                                                   "artifact": NSMutableArray()]
     
     // Declaring an object that will call the functions in SimpleController()
     var connectionController = SimpleController()
@@ -380,14 +373,13 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
             for (table, queue) in self.queues {
                 NSLog("background thread: queue = \(table)")
                 queue.sync {
-                    var pendingJsons = self.pendingJsons[table] as? NSMutableArray ?? NSMutableArray()
-                    let count = pendingJsons.count
+                    let count = self.pendingJsons[table]!.count
                     NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
                     let json: [String: Any] = ["table": table,
                                                "subject_id": 1,   // TODO const
-                                               "rows": pendingJsons]
+                                               "rows": self.pendingJsons[table]!]
                     postRequest(json: json) // TODO do it async
-                    pendingJsons.removeAllObjects()
+                    self.pendingJsons[table]!.removeAllObjects()
                 }
                 usleep(100000) // 0.1 seconds
             }
@@ -403,10 +395,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //
         let queue = self.queues[table] as? DispatchQueue ?? DispatchQueue(label: "muse." + table + "PendingJsons", attributes: .concurrent)
         queue.async(flags: .barrier) {
-            var pendingJsons = self.pendingJsons[table] as? NSMutableArray ?? NSMutableArray()
-            pendingJsons.add(json)
-            print("\(table) -> insert \(json)")
-            self.pendingJsons[table] = pendingJsons // OK b/c NSMutableObject is a class => assigned by ref
+            //print("\(table) -> insert \(json)")
+            self.pendingJsons[table]!.add(json)
         }
     }
 
@@ -416,7 +406,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0) / 1000000, 
+                                   "timestamp": (packet.timestamp() ?? 0), 
                                    "eeg1": packet.getEegChannelValue(IXNEeg.EEG1).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG1), // TODO handle NaNs normally with sockets... fuck JSONSerialization
                                    "eeg2": packet.getEegChannelValue(IXNEeg.EEG2).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG2),
                                    "eeg3": packet.getEegChannelValue(IXNEeg.EEG3).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG3),
@@ -430,7 +420,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     func postRequestAccelerometer(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0) / 1000000,
+                                   "timestamp": (packet.timestamp() ?? 0),
                                    "x": packet.getAccelerometerValue(IXNAccelerometer.X).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.X),
                                    "y": packet.getAccelerometerValue(IXNAccelerometer.Y).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Y),
                                    "z": packet.getAccelerometerValue(IXNAccelerometer.Z).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Z),
@@ -444,7 +434,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     func postRequestGyro(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0) / 1000000,
+                                   "timestamp": (packet.timestamp() ?? 0),
                                    "x": packet.getGyroValue(IXNGyro.X).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.X),
                                    "y": packet.getGyroValue(IXNGyro.Y).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Y),
                                    "z": packet.getGyroValue(IXNGyro.Z).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Z),
@@ -458,8 +448,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     func postRequestArtifact(packet: IXNMuseArtifactPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   //"timestamp": packet.timestamp / 1000000, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
-                                   "timestamp": NSDate().timeIntervalSince1970,
+                                   //"timestamp": packet.timestamp, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
+                                   "timestamp": NSDate().timeIntervalSince1970 * 1000000,
                                    "headband": packet.headbandOn,
                                    "blink": packet.blink,
                                    "jaw": packet.jawClench]
@@ -530,11 +520,10 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
     
     @IBAction func scan(_ sender: AnyObject) {
-        let json: [String: Any] = ["table": "gyro",
-                                   "subject_id": 1,   
-                                   "rows": NSMutableArray()]
-        postRequest(json: json) // TODO do it async
-
+        //let json: [String: Any] = ["table": "gyro",
+        //                           "subject_id": 1,   
+        //                           "rows": NSMutableArray()]
+        //postRequest(json: json) 
         //self.testPostRequest()
 
         //SimpleController().scan(AnyObject)
