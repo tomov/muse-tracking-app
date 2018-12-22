@@ -281,6 +281,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         self.muse.register(self, type: IXNMuseDataPacketType.hsiPrecision)
         self.muse.register(self, type: IXNMuseDataPacketType.accelerometer)
         self.muse.register(self, type: IXNMuseDataPacketType.gyro)
+        self.muse.register(self, type: IXNMuseDataPacketType.battery)
         
         
         //self.muse.register(self, type: IXNMuseDataPacketType.eeg) <-- RAW eeg data DO NOT USE -- too much
@@ -494,6 +495,9 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gyro {
             postRequestGyro(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gyro", subject_id: -1)
+        } else if packet?.packetType() == IXNMuseDataPacketType.battery {
+            let battery = packet?.getBatteryValue(IXNBattery.chargePercentageRemaining)
+            self.batteryLevel.text = NSString(format: "Battery level: %.1f%% remaining", battery!) as String?
         }
     }
     
