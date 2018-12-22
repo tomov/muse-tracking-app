@@ -42,6 +42,37 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     var manager = IXNMuseManagerIos()
     var logLines = [Any]()
     var isLastBlink = false
+
+    // queue for batch sending POST requests
+    // one queue for each table (for batch insert on the backend)
+    //
+    //var queues = [String: DispatchQueue]()
+    //var pendingJsons = [String: [[String: Any]]]()
+    var pendingJsons = [String: NSMutableArray]()
+
+    let queues: [String: DispatchQueue] = ["alpha": DispatchQueue(label: "muse.alphaPendingJsons", attributes: .concurrent),
+                                           "beta": DispatchQueue(label: "muse.betaPendingJsons", attributes: .concurrent),
+                                           "delta": DispatchQueue(label: "muse.deltaPendingJsons", attributes: .concurrent),
+                                           "theta": DispatchQueue(label: "muse.thetaPendingJsons", attributes: .concurrent),
+                                           "gamma": DispatchQueue(label: "muse.gammaPendingJsons", attributes: .concurrent),
+                                           "good": DispatchQueue(label: "muse.goodPendingJsons", attributes: .concurrent),
+                                           "hsi": DispatchQueue(label: "muse.hsiPendingJsons", attributes: .concurrent),
+                                           "accelerometer": DispatchQueue(label: "muse.accelerometerPendingJsons", attributes: .concurrent),
+                                           "gyro": DispatchQueue(label: "muse.gyroPendingJsons", attributes: .concurrent),
+                                           "artifact": DispatchQueue(label: "muse.artifactPendingJsons", attributes: .concurrent)]
+
+    /*
+    var pendingJsons: [String: [[String: Any]]] = ["alpha": [],
+                                                   "beta": [],
+                                                   "delta": [],
+                                                   "theta": [],
+                                                   "gamma": [],
+                                                   "good": [],
+                                                   "hsi": [],
+                                                   "accelerometer": [],
+                                                   "gyro": [],
+                                                   "artifact": []]
+   */
     
     // Declaring an object that will call the functions in SimpleController()
     var connectionController = SimpleController()
@@ -259,6 +290,12 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //self.muse.register(self, type: IXNMuseDataPacketType.eeg) <-- RAW eeg data DO NOT USE -- too much
         
         self.muse.runAsynchronously()
+
+        // from https://medium.com/@ashok.nfn/run-tasks-on-background-thread-swift-5d3aec272140
+        let dispatchQueue = DispatchQueue(label: "muse.backgroundDequeueRequests", qos: .background)
+        dispatchQueue.async{
+            self.backgroundDequeueRequests()
+        }
     }
 
     func testPostRequest() {
@@ -316,10 +353,10 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         var request = URLRequest(url: url)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpMethod = "POST"
- 
-		let jsonData = try? JSONSerialization.data(withJSONObject: json)
-		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-		request.httpBody = jsonData
+
+        let jsonData = try? JSONSerialization.data(withJSONObject: json)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {                                                 // check for fundamental networking error
@@ -338,111 +375,127 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         task.resume()
     }
 
+    func backgroundDequeueRequests() {
+        while true {
+            for (table, queue) in self.queues {
+                NSLog("background thread: queue = \(table)")
+                queue.sync {
+                    var pendingJsons = self.pendingJsons[table] as? NSMutableArray ?? NSMutableArray()
+                    let count = pendingJsons.count
+                    NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
+                    let json: [String: Any] = ["table": table,
+                                               "subject_id": 1,   // TODO const
+                                               "rows": pendingJsons]
+                    postRequest(json: json) // TODO do it async
+                    pendingJsons.removeAllObjects()
+                }
+                usleep(100000) // 0.1 seconds
+            }
+
+        }
+    }
+
+
+    func enqueueRequest(table: String, json: Dictionary<String, Any>) {
+        // from http://basememara.com/creating-thread-safe-arrays-in-swift/
+        //  and https://stackoverflow.com/questions/41518492/append-to-array-in-string-any-dictionary-structure/41518630
+        //  and https://medium.com/capital-one-tech/reference-and-value-types-in-swift-de792db330b2
+        //
+        let queue = self.queues[table] as? DispatchQueue ?? DispatchQueue(label: "muse." + table + "PendingJsons", attributes: .concurrent)
+        queue.async(flags: .barrier) {
+            var pendingJsons = self.pendingJsons[table] as? NSMutableArray ?? NSMutableArray()
+            pendingJsons.add(json)
+            print("\(table) -> insert \(json)")
+            self.pendingJsons[table] = pendingJsons // OK b/c NSMutableObject is a class => assigned by ref
+        }
+    }
+
     // Post a EEG request, with one value for each channel, e.g. alpha band or isGood values
     //
-    func postRequestEeg(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+    func postRequestEeg(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
 
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
-                                   "eeg1": packet?.getEegChannelValue(IXNEeg.EEG1),
-                                   "eeg2": packet?.getEegChannelValue(IXNEeg.EEG2),
-                                   "eeg3": packet?.getEegChannelValue(IXNEeg.EEG3),
-                                   "eeg4": packet?.getEegChannelValue(IXNEeg.EEG4),
-                                   "aux1": packet?.getEegChannelValue(IXNEeg.AUXLEFT),
-                                   "aux2": packet?.getEegChannelValue(IXNEeg.AUXRIGHT)]
-        postRequest(json: json)
+                                   "timestamp": (packet.timestamp() ?? 0) / 1000000, 
+                                   "eeg1": packet.getEegChannelValue(IXNEeg.EEG1).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG1), // TODO handle NaNs normally with sockets... fuck JSONSerialization
+                                   "eeg2": packet.getEegChannelValue(IXNEeg.EEG2).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG2),
+                                   "eeg3": packet.getEegChannelValue(IXNEeg.EEG3).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG3),
+                                   "eeg4": packet.getEegChannelValue(IXNEeg.EEG4).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG4),
+                                   "aux1": packet.getEegChannelValue(IXNEeg.AUXLEFT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXLEFT),
+                                   "aux2": packet.getEegChannelValue(IXNEeg.AUXRIGHT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXRIGHT)]
+        //postRequest(json: json)
+        enqueueRequest(table:table, json: json)
     }
 
-    func postRequestAccelerometer(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+    func postRequestAccelerometer(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
-                                   "x": packet?.getAccelerometerValue(IXNAccelerometer.X),
-                                   "y": packet?.getAccelerometerValue(IXNAccelerometer.Y),
-                                   "z": packet?.getAccelerometerValue(IXNAccelerometer.Z),
-                                   "fb": packet?.getAccelerometerValue(IXNAccelerometer.forwardBackward),
-                                   "ud": packet?.getAccelerometerValue(IXNAccelerometer.upDown),
-                                   "lr": packet?.getAccelerometerValue(IXNAccelerometer.leftRight)]
-        postRequest(json: json)
+                                   "timestamp": (packet.timestamp() ?? 0) / 1000000,
+                                   "x": packet.getAccelerometerValue(IXNAccelerometer.X).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.X),
+                                   "y": packet.getAccelerometerValue(IXNAccelerometer.Y).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Y),
+                                   "z": packet.getAccelerometerValue(IXNAccelerometer.Z).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Z),
+                                   "fb": packet.getAccelerometerValue(IXNAccelerometer.forwardBackward).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.forwardBackward),
+                                   "ud": packet.getAccelerometerValue(IXNAccelerometer.upDown).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.upDown),
+                                   "lr": packet.getAccelerometerValue(IXNAccelerometer.leftRight).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.leftRight)]
+        //postRequest(json: json)
+        enqueueRequest(table:table, json: json)
     }
 
-    func postRequestGyro(packet: IXNMuseDataPacket?, table: String?, subject_id: Int?) {
+    func postRequestGyro(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   "timestamp": (packet?.timestamp() ?? 0) / 1000000,
-                                   "x": packet?.getGyroValue(IXNGyro.X),
-                                   "y": packet?.getGyroValue(IXNGyro.Y),
-                                   "z": packet?.getGyroValue(IXNGyro.Z),
-                                   "fb": packet?.getGyroValue(IXNGyro.forwardBackward),
-                                   "ud": packet?.getGyroValue(IXNGyro.upDown),
-                                   "lr": packet?.getGyroValue(IXNGyro.leftRight)]
-        postRequest(json: json)
+                                   "timestamp": (packet.timestamp() ?? 0) / 1000000,
+                                   "x": packet.getGyroValue(IXNGyro.X).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.X),
+                                   "y": packet.getGyroValue(IXNGyro.Y).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Y),
+                                   "z": packet.getGyroValue(IXNGyro.Z).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Z),
+                                   "fb": packet.getGyroValue(IXNGyro.forwardBackward).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.forwardBackward),
+                                   "ud": packet.getGyroValue(IXNGyro.upDown).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.upDown),
+                                   "lr": packet.getGyroValue(IXNGyro.leftRight).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.leftRight)]
+        //postRequest(json: json)
+        enqueueRequest(table:table, json: json)
     }
 
-    func postRequestArtifact(packet: IXNMuseArtifactPacket?, table: String?, subject_id: Int?) {
+    func postRequestArtifact(packet: IXNMuseArtifactPacket, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
                                    "subject_id": subject_id,
-                                   //"timestamp": packet?.timestamp / 1000000, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
+                                   //"timestamp": packet.timestamp / 1000000, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
                                    "timestamp": NSDate().timeIntervalSince1970,
-                                   "headband": packet?.headbandOn,
-                                   "blink": packet?.blink,
-                                   "jaw": packet?.jawClench]
-        postRequest(json: json)
+                                   "headband": packet.headbandOn,
+                                   "blink": packet.blink,
+                                   "jaw": packet.jawClench]
+        //postRequest(json: json)
+        enqueueRequest(table:table, json: json)
     }
 
     func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
 
         if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute {
-            postRequestEeg(packet: packet, table: "alpha", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "alpha", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute {
-            postRequestEeg(packet: packet, table: "beta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "beta", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.deltaAbsolute {
-            postRequestEeg(packet: packet, table: "delta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "delta", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.thetaAbsolute {
-            postRequestEeg(packet: packet, table: "theta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "theta", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gammaAbsolute {
-            postRequestEeg(packet: packet, table: "gamma", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gamma", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.isGood {
-            postRequestEeg(packet: packet, table: "good", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "good", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.hsiPrecision {
-            postRequestEeg(packet: packet, table: "hsi", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "hsi", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.accelerometer {
-            postRequestAccelerometer(packet: packet, table: "accelerometer", subject_id: -1)
+            postRequestAccelerometer(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "accelerometer", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gyro {
-            postRequestGyro(packet: packet, table: "gyro", subject_id: -1)
+            postRequestGyro(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gyro", subject_id: -1)
         }
-
-       // if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
-       //     
-       //     if let info = packet?.values() {
-       //         //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-       //         print("Alpha: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
-       //     }
-       //     
-       //     //  Lines below are not exactly correct
-       //     //print("Alpha: \(packet?.values()[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-       //     //print("%5.2f %5.2f %5.2f %5.2f", packet?.values() ?? 0)
-
-       //     //self.postRequest()
-       // }
-       // 
-       // // TODO: Add info for other brainwaves
-       // if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute || packet?.packetType() == IXNMuseDataPacketType.eeg {
-       //     
-       //     if let info = packet?.values() {
-       //         //print("Alpha: \(info[0]) Beta: \(IXNEeg.EEG2.rawValue) Gamma: \(IXNEeg.EEG3.rawValue) Theta: \(IXNEeg.EEG4.rawValue)")
-       //         print("Beta: \(info[0]) \(info[1]) \(info[2]) \(info[3]) \(info[4]) \(info[5])")
-       //     }
-       // }
     }
     
     func receive(_ packet: IXNMuseArtifactPacket, muse: IXNMuse?) {
@@ -477,6 +530,11 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
     
     @IBAction func scan(_ sender: AnyObject) {
+        let json: [String: Any] = ["table": "gyro",
+                                   "subject_id": 1,   
+                                   "rows": NSMutableArray()]
+        postRequest(json: json) // TODO do it async
+
         //self.testPostRequest()
 
         //SimpleController().scan(AnyObject)
