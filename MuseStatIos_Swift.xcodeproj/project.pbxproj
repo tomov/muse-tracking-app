@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		229C81731DD172A700D2DDF1 /* SimpleController.m in Sources */ = {isa = PBXBuildFile; fileRef = 229C81721DD172A700D2DDF1 /* SimpleController.m */; };
-		229C81751DD1784C00D2DDF1 /* SimpleController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 229C81741DD1784C00D2DDF1 /* SimpleController.xib */; };
 		22C23A071DD074C600B83272 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C23A061DD074C600B83272 /* AppDelegate.swift */; };
 		22C23A091DD074C600B83272 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C23A081DD074C600B83272 /* ViewController.swift */; };
 		22C23A0C1DD074C600B83272 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 22C23A0A1DD074C600B83272 /* Main.storyboard */; };
@@ -24,7 +23,6 @@
 		229C81701DD172A700D2DDF1 /* MuseStatIos_Swift-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MuseStatIos_Swift-Bridging-Header.h"; sourceTree = "<group>"; };
 		229C81711DD172A700D2DDF1 /* SimpleController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleController.h; sourceTree = "<group>"; };
 		229C81721DD172A700D2DDF1 /* SimpleController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleController.m; sourceTree = "<group>"; };
-		229C81741DD1784C00D2DDF1 /* SimpleController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SimpleController.xib; sourceTree = "<group>"; };
 		22C23A031DD074C600B83272 /* MuseStatIos_Swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MuseStatIos_Swift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		22C23A061DD074C600B83272 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		22C23A081DD074C600B83272 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -71,7 +69,6 @@
 			isa = PBXGroup;
 			children = (
 				22CDAD211DE688B300A531B0 /* ConnectionController.swift */,
-				229C81741DD1784C00D2DDF1 /* SimpleController.xib */,
 				229C81711DD172A700D2DDF1 /* SimpleController.h */,
 				229C81721DD172A700D2DDF1 /* SimpleController.m */,
 				22C23A061DD074C600B83272 /* AppDelegate.swift */,
@@ -157,7 +154,6 @@
 				22C23A111DD074C600B83272 /* LaunchScreen.storyboard in Resources */,
 				22C23A0E1DD074C600B83272 /* Assets.xcassets in Resources */,
 				22C23A0C1DD074C600B83272 /* Main.storyboard in Resources */,
-				229C81751DD1784C00D2DDF1 /* SimpleController.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
