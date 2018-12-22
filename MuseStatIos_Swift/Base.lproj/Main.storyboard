@@ -73,6 +73,13 @@
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Theta: ? ? ? ? ? ?" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zcB-Uo-fv1">
+                                <rect key="frame" x="16" y="533" width="336" height="21"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -99,6 +106,7 @@
                         <outlet property="logView" destination="QzA-N3-63l" id="Bw0-ch-pZw"/>
                         <outlet property="signalQuality" destination="d59-sz-Soo" id="gFq-YQ-8RJ"/>
                         <outlet property="tableView" destination="guk-dB-S0Q" id="d9l-VU-Bqo"/>
+                        <outlet property="thetas" destination="zcB-Uo-fv1" id="LuU-XW-Fzc"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

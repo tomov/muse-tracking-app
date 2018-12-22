@@ -51,6 +51,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     @IBOutlet var logView: UITextView!
     @IBOutlet var batteryLevel: UILabel!
     @IBOutlet var signalQuality: UILabel!
+    @IBOutlet var thetas: UILabel!
 
     // from https://www.raywenderlich.com/5817-background-modes-tutorial-getting-started
     var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
@@ -282,7 +283,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         
         self.muse.runAsynchronously()
 
-        self.registerBackgroundTask() // so it can keep collecting in the background
+        self.registerBackgroundTask() // so it can keep collecting in the background TODO is it even necessary??
     }
 
 
@@ -338,6 +339,13 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
         } else if packet?.packetType() == IXNMuseDataPacketType.thetaAbsolute {
             postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "theta")
+            self.thetas.text = NSString(format: "Theta: %.1f %.1f %.1f %.1f %.1f %.1f",
+                                               packet!.getEegChannelValue(IXNEeg.EEG1),
+                                               packet!.getEegChannelValue(IXNEeg.EEG2),
+                                               packet!.getEegChannelValue(IXNEeg.EEG3),
+                                               packet!.getEegChannelValue(IXNEeg.EEG4),
+                                               packet!.getEegChannelValue(IXNEeg.AUXLEFT),
+                                               packet!.getEegChannelValue(IXNEeg.AUXRIGHT)) as String?
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gammaAbsolute {
             postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gamma")
