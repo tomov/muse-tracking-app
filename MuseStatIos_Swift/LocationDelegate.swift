@@ -10,7 +10,8 @@ import CoreLocation
 import CoreMotion
 
 class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
-    
+   
+    /*
     enum Mode: String {
         case OFF
         case UPDATING // startUpdatingLocation
@@ -20,26 +21,21 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
     
     private var mode = Mode.OFF
     dynamic var modeString = ""
+ */
     
     let locationManager = CLLocationManager()
     let motionManager = CMMotionManager()
 
+    /*
     dynamic var location = CLLocation()
-    
+  
     private var geo = CLGeocoder()
     dynamic var address = ""
+ */
     
     static let sharedInstance = LocationDelegate()
 
-    // TODO dedupe with ConnectionController.swift
-    //
-    let queues: [String: DispatchQueue] = ["location": DispatchQueue(label: "muse.locationPendingJsons", attributes: .concurrent),
-                                           "acceleration": DispatchQueue(label: "muse.accelerationPendingJsons", attributes: .concurrent)]
-    var pendingJsons: [String: NSMutableArray] = ["location": NSMutableArray(),
-                                                  "acceleration": NSMutableArray()]
-    var semaphore = DispatchSemaphore(value: 0) // make POST requests synchronous
-    
-    func setup () {
+    func setup() {
         locationManager.delegate = self
 
         // request permission to use locations
@@ -53,7 +49,7 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
 
-        mode = Mode.OFF
+        // mode = Mode.OFF
 
         motionManager.deviceMotionUpdateInterval = 0.1 // TODO const
         motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] (data, error) in
@@ -64,12 +60,6 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
             if (data != nil) {
                 self!.postRequestAcceleration(acceleration: data!.userAcceleration, table: "acceleration", subject_id: -1) // TODO subj id
             }
-        }
-
-        // from https://medium.com/@ashok.nfn/run-tasks-on-background-thread-swift-5d3aec272140
-        let dispatchQueue = DispatchQueue(label: "muse.backgroundLocationDequeueRequests", qos: .background)
-        dispatchQueue.async{
-            self.backgroundDequeueRequests()
         }
     }
 
@@ -145,82 +135,6 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
     */
 
 
-    // TODO dedupe with ConnectionController 
-    //
-    func postRequestAsync(table: String, json: Dictionary<String, Any>) -> URLSessionDataTask {
-        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!  // TODO const
-        //let url = URL(string: "http://127.0.0.1:5000/log")!
-
-        var request = URLRequest(url: url)
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpMethod = "POST"
-
-        let jsonData = try? JSONSerialization.data(withJSONObject: json)
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = jsonData
-
-        var task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data, error == nil else {                                                 // check for fundamental networking error
-                print("error=\(error)")
-                return
-            }
-
-            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {           // check for http errors
-                print("statusCode should be 200, but is \(httpStatus.statusCode)")
-                print("response = \(response)")
-            } else {
-                // no error -> safe to empty array 
-                // TODO this could create a deadly spiral, if server errors out b/c request is too big -> request is bigger next time
-                self.queues[table]!.sync {
-                    self.pendingJsons[table]!.removeAllObjects()
-                }
-            }
-
-            let responseString = String(data: data, encoding: .utf8)
-            print("responseString = \(responseString)")
-            self.semaphore.signal()
-
-        }
-        return task
-    }
-
-    // TODO dedupe with ConnectionController
-    //
-    func backgroundDequeueRequests() {
-        while true {
-            for (table, queue) in self.queues {
-                NSLog("background thread: queue = \(table)")
-                var task = URLSessionDataTask()
-                queue.sync {
-                    let count = self.pendingJsons[table]!.count
-                    NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
-                    let json: [String: Any] = ["table": table,
-                                               "subject_id": 1,   // TODO const
-                                               "rows": self.pendingJsons[table]!]
-                    task = postRequestAsync(table: table, json: json) // TODO do it async
-                }
-                // Execute task out here so as not to block Muse request from queueing up
-                //
-                self.semaphore = DispatchSemaphore(value: 0) // wait for the request to complete
-                task.resume()
-                print("       ...waiting on semaphore")
-                _ = self.semaphore.wait(timeout: .distantFuture)  
-                usleep(100000) // 0.1 seconds
-            }
-        }
-    }
-
-
-    // TODO dedupe with ConnectionController 
-    //
-    func enqueueRequest(table: String, json: Dictionary<String, Any>) {
-
-        let queue = self.queues[table] as? DispatchQueue ?? DispatchQueue(label: "muse." + table + "PendingJsons", attributes: .concurrent)
-        queue.async(flags: .barrier) {
-            //print("\(table) -> insert \(json)")
-            self.pendingJsons[table]!.add(json)
-        }
-    }
 
     func postRequestLocation(location: CLLocation?, table: String, subject_id: Int?) {
         let json: [String: Any] = ["table": table,
@@ -229,7 +143,7 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
                                    "latitude": location!.coordinate.latitude,
                                    "longitude": location!.coordinate.longitude,
                                    "altitude": location!.altitude]
-        enqueueRequest(table:table, json: json)
+        NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
     func postRequestAcceleration(acceleration: CMAcceleration, table: String, subject_id: Int?) {
@@ -239,7 +153,7 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
                                    "x": acceleration.x,
                                    "y": acceleration.y,
                                    "z": acceleration.z]
-        enqueueRequest(table:table, json: json)
+        NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
     

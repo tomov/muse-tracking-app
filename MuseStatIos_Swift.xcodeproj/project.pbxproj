@@ -17,6 +17,7 @@
 		22CDAD201DE6889400A531B0 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 22CDAD1F1DE6889400A531B0 /* libc++.tbd */; };
 		22CDAD221DE688B300A531B0 /* ConnectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CDAD211DE688B300A531B0 /* ConnectionController.swift */; };
 		5E8D99FC21CEB37E007CEB71 /* LocationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */; };
+		5E8D99FE21CED50D007CEB71 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E8D99FD21CED50D007CEB71 /* NetworkManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		22CDAD1F1DE6889400A531B0 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		22CDAD211DE688B300A531B0 /* ConnectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConnectionController.swift; sourceTree = "<group>"; };
 		5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationDelegate.swift; sourceTree = "<group>"; };
+		5E8D99FD21CED50D007CEB71 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +83,7 @@
 				22C23A121DD074C600B83272 /* Info.plist */,
 				229C81701DD172A700D2DDF1 /* MuseStatIos_Swift-Bridging-Header.h */,
 				5E8D99FB21CEB37E007CEB71 /* LocationDelegate.swift */,
+				5E8D99FD21CED50D007CEB71 /* NetworkManager.swift */,
 			);
 			path = MuseStatIos_Swift;
 			sourceTree = "<group>";
@@ -172,6 +175,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5E8D99FE21CED50D007CEB71 /* NetworkManager.swift in Sources */,
 				22C23A091DD074C600B83272 /* ViewController.swift in Sources */,
 				22CDAD221DE688B300A531B0 /* ConnectionController.swift in Sources */,
 				22C23A071DD074C600B83272 /* AppDelegate.swift in Sources */,

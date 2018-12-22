@@ -59,6 +59,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // setup locMgr
         //
         LocationDelegate.sharedInstance.setup()
+        NetworkManager.sharedInstance.setup()
 
         return true
     }
