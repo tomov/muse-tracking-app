@@ -336,7 +336,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         task.resume()
     }
 
-    func postRequest(json: Dictionary<String, Any>) {
+    func postRequestSync(json: Dictionary<String, Any>) {
 		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
 		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
 
@@ -368,19 +368,63 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         task.resume()
     }
 
+    // Post request to remote server and on successful completion, empty array with requests
+    // TODO tight coupling with backgroundDequeueRequest()...
+    //
+    func postRequestAsync(table: String, json: Dictionary<String, Any>) -> URLSessionDataTask {
+		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
+		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
+        // also https://developer.apple.com/documentation/foundation/urlsession/1407613-datatask
+
+        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!  // TODO const
+        //let url = URL(string: "http://127.0.0.1:5000/log")!
+
+        var request = URLRequest(url: url)
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpMethod = "POST"
+
+        let jsonData = try? JSONSerialization.data(withJSONObject: json)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+
+        var task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {                                                 // check for fundamental networking error
+                print("error=\(error)")
+                return
+            }
+
+            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {           // check for http errors
+                print("statusCode should be 200, but is \(httpStatus.statusCode)")
+                print("response = \(response)")
+            } else {
+                // no error -> safe to empty array 
+                // TODO this could create a deadly spiral, if server errors out b/c request is too big -> request is bigger next time
+                self.queues[table]!.sync {
+                    self.pendingJsons[table]!.removeAllObjects()
+                }
+            }
+
+            let responseString = String(data: data, encoding: .utf8)
+            print("responseString = \(responseString)")
+
+        }
+        return task
+    }
+
     func backgroundDequeueRequests() {
         while true {
             for (table, queue) in self.queues {
                 NSLog("background thread: queue = \(table)")
+                var task = URLSessionDataTask()
                 queue.sync {
                     let count = self.pendingJsons[table]!.count
                     NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
                     let json: [String: Any] = ["table": table,
                                                "subject_id": 1,   // TODO const
                                                "rows": self.pendingJsons[table]!]
-                    postRequest(json: json) // TODO do it async
-                    self.pendingJsons[table]!.removeAllObjects()
+                    task = postRequestAsync(table: table, json: json) // TODO do it async
                 }
+                task.resume()
                 usleep(100000) // 0.1 seconds
             }
 
@@ -413,7 +457,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                    "eeg4": packet.getEegChannelValue(IXNEeg.EEG4).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG4),
                                    "aux1": packet.getEegChannelValue(IXNEeg.AUXLEFT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXLEFT),
                                    "aux2": packet.getEegChannelValue(IXNEeg.AUXRIGHT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXRIGHT)]
-        //postRequest(json: json)
+        //postRequestSync(json: json)
         enqueueRequest(table:table, json: json)
     }
 
@@ -427,7 +471,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                    "fb": packet.getAccelerometerValue(IXNAccelerometer.forwardBackward).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.forwardBackward),
                                    "ud": packet.getAccelerometerValue(IXNAccelerometer.upDown).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.upDown),
                                    "lr": packet.getAccelerometerValue(IXNAccelerometer.leftRight).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.leftRight)]
-        //postRequest(json: json)
+        //postRequestSync(json: json)
         enqueueRequest(table:table, json: json)
     }
 
@@ -441,7 +485,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                    "fb": packet.getGyroValue(IXNGyro.forwardBackward).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.forwardBackward),
                                    "ud": packet.getGyroValue(IXNGyro.upDown).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.upDown),
                                    "lr": packet.getGyroValue(IXNGyro.leftRight).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.leftRight)]
-        //postRequest(json: json)
+        //postRequestSync(json: json)
         enqueueRequest(table:table, json: json)
     }
 
@@ -453,7 +497,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                    "headband": packet.headbandOn,
                                    "blink": packet.blink,
                                    "jaw": packet.jawClench]
-        //postRequest(json: json)
+        //postRequestSync(json: json)
         enqueueRequest(table:table, json: json)
     }
 
@@ -523,7 +567,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //let json: [String: Any] = ["table": "gyro",
         //                           "subject_id": 1,   
         //                           "rows": NSMutableArray()]
-        //postRequest(json: json) 
+        //postRequestSync(json: json) 
         //self.testPostRequest()
 
         //SimpleController().scan(AnyObject)
