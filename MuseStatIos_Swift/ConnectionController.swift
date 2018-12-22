@@ -469,7 +469,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
     func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
 
-        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute {
+        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute { // TODO input subject id, or const
             postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "alpha", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute {
@@ -489,12 +489,20 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
         } else if packet?.packetType() == IXNMuseDataPacketType.hsiPrecision {
             postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "hsi", subject_id: -1)
+            self.signalQuality.text = NSString(format: "HSI: %.1f %.1f %.1f %.1f %.1f %.1f",
+                                               packet!.getEegChannelValue(IXNEeg.EEG1),
+                                               packet!.getEegChannelValue(IXNEeg.EEG2),
+                                               packet!.getEegChannelValue(IXNEeg.EEG3),
+                                               packet!.getEegChannelValue(IXNEeg.EEG4),
+                                               packet!.getEegChannelValue(IXNEeg.AUXLEFT),
+                                               packet!.getEegChannelValue(IXNEeg.AUXRIGHT)) as String?
 
         } else if packet?.packetType() == IXNMuseDataPacketType.accelerometer {
             postRequestAccelerometer(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "accelerometer", subject_id: -1)
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gyro {
             postRequestGyro(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gyro", subject_id: -1)
+            
         } else if packet?.packetType() == IXNMuseDataPacketType.battery {
             let battery = packet?.getBatteryValue(IXNBattery.chargePercentageRemaining)
             self.batteryLevel.text = NSString(format: "Battery level: %.1f%% remaining", battery!) as String?
