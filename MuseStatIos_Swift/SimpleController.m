@@ -169,8 +169,9 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 }
 
 - (void)applicationWillResignActive {
-    NSLog(@"disconnecting before going into background");
-    [self.muse disconnect:true];
+    // MOMCHIL: do NOT disconnect before going into background!
+    //NSLog(@"disconnecting before going into background");
+    //[self.muse disconnect:true];
 }
 
 - (IBAction)disconnect:(id)sender {

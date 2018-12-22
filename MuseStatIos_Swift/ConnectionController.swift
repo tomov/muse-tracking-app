@@ -51,6 +51,24 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     @IBOutlet var logView: UITextView!
     @IBOutlet var batteryLevel: UILabel!
     @IBOutlet var signalQuality: UILabel!
+
+    // from https://www.raywenderlich.com/5817-background-modes-tutorial-getting-started
+    var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
+
+    func registerBackgroundTask() {
+      print("Background task started.")
+      backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+        self?.endBackgroundTask()
+      }
+      assert(backgroundTask != UIBackgroundTaskInvalid)
+    }
+      
+    func endBackgroundTask() {
+      print("Background task ended.")
+      UIApplication.shared.endBackgroundTask(backgroundTask)
+      backgroundTask = UIBackgroundTaskInvalid
+    }
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -238,7 +256,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
             state = "needs update"
         case IXNConnectionState.unknown:
             state = "unknown"
-        }
+    }
         print("connect: \(state)")
     }
     
@@ -263,6 +281,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //self.muse.register(self, type: IXNMuseDataPacketType.eeg) <-- RAW eeg data DO NOT USE -- too much
         
         self.muse.runAsynchronously()
+
+        self.registerBackgroundTask() // so it can keep collecting in the background
     }
 
 

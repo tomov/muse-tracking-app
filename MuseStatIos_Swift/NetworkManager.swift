@@ -54,7 +54,7 @@ class NetworkManager: NSObject /*for @objc*/ {
     }
 
 
-    func postRequestSync(json: Dictionary<String, Any>) {
+    private func postRequestSync(json: Dictionary<String, Any>) {
 		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
 		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
 
@@ -90,7 +90,7 @@ class NetworkManager: NSObject /*for @objc*/ {
     // note that async is a bit of a misnomer -- it is async w.r.t. the queue, but it is actually sync w.r.t. the POST request (i.e. we wait for it to complete)
     // TODO tight coupling with backgroundDequeueRequest()...
     //
-    func postRequestAsync(table: String, json: Dictionary<String, Any>) -> URLSessionDataTask {
+    private func postRequestAsync(table: String, json: Dictionary<String, Any>) -> URLSessionDataTask {
 		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
 		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
         // also https://developer.apple.com/documentation/foundation/urlsession/1407613-datatask
@@ -124,21 +124,21 @@ class NetworkManager: NSObject /*for @objc*/ {
             }
 
             let responseString = String(data: data, encoding: .utf8)
-            print("responseString = \(responseString)")
+            //print("responseString = \(responseString)")
             self.semaphore.signal()
 
         }
         return task
     }
 
-    func backgroundDequeueRequests() {
+    private func backgroundDequeueRequests() {
         while true {
             for (table, queue) in self.queues {
-                NSLog("background thread: queue = \(table)")
+                //NSLog("background thread: queue = \(table)")
                 var task = URLSessionDataTask()
                 queue.sync {
                     let count = self.pendingJsons[table]!.count
-                    NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
+                    //NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
                     let json: [String: Any] = ["table": table,
                                                "subject_id": 1,   // TODO const
                                                "rows": self.pendingJsons[table]!]
@@ -148,7 +148,7 @@ class NetworkManager: NSObject /*for @objc*/ {
                 //
                 self.semaphore = DispatchSemaphore(value: 0) // wait for the request to complete
                 task.resume()
-                print("       ...waiting on semaphore")
+                //print("       ...waiting on semaphore")
                 _ = self.semaphore.wait(timeout: .distantFuture)  
                 usleep(100000) // 0.1 seconds
             }
