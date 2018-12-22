@@ -8,7 +8,7 @@
 
 import Foundation
 
-// Singleton class for managing streaming data to the 
+// Singleton class for managing streaming data to the server
 //
 class NetworkManager: NSObject /*for @objc*/ {
 

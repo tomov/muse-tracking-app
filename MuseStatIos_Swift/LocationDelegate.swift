@@ -58,14 +58,14 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
             }
 
             if (data != nil) {
-                self!.postRequestAcceleration(acceleration: data!.userAcceleration, table: "acceleration", subject_id: -1) // TODO subj id
+                self!.postRequestAcceleration(acceleration: data!.userAcceleration, table: "acceleration")
             }
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for location in locations {
-            self.postRequestLocation(location: location, table: "location", subject_id: -1)
+            self.postRequestLocation(location: location, table: "location")
         }
     }
    
@@ -136,20 +136,16 @@ class LocationDelegate: NSObject /*for @objc*/, CLLocationManagerDelegate {
 
 
 
-    func postRequestLocation(location: CLLocation?, table: String, subject_id: Int?) {
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": location!.timestamp.timeIntervalSince1970 * 1000000, // TODO precise
+    func postRequestLocation(location: CLLocation?, table: String) {
+        let json: [String: Any] = ["timestamp": location!.timestamp.timeIntervalSince1970 * 1000000, // TODO precise
                                    "latitude": location!.coordinate.latitude,
                                    "longitude": location!.coordinate.longitude,
                                    "altitude": location!.altitude]
         NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
-    func postRequestAcceleration(acceleration: CMAcceleration, table: String, subject_id: Int?) {
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": NSDate().timeIntervalSince1970 * 1000000, // TODO precise
+    func postRequestAcceleration(acceleration: CMAcceleration, table: String) {
+        let json: [String: Any] = ["timestamp": NSDate().timeIntervalSince1970 * 1000000, // TODO precise
                                    "x": acceleration.x,
                                    "y": acceleration.y,
                                    "z": acceleration.z]

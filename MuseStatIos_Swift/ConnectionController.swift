@@ -268,83 +268,65 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
     // Post a EEG request, with one value for each channel, e.g. alpha band or isGood values
     //
-    func postRequestEeg(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
+    func postRequestEeg(packet: IXNMuseDataPacket, table: String) {
 
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0), 
+        let json: [String: Any] = ["timestamp": (packet.timestamp() ?? 0), 
                                    "eeg1": packet.getEegChannelValue(IXNEeg.EEG1).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG1), // TODO handle NaNs normally with sockets... fuck JSONSerialization
                                    "eeg2": packet.getEegChannelValue(IXNEeg.EEG2).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG2),
                                    "eeg3": packet.getEegChannelValue(IXNEeg.EEG3).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG3),
                                    "eeg4": packet.getEegChannelValue(IXNEeg.EEG4).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.EEG4),
                                    "aux1": packet.getEegChannelValue(IXNEeg.AUXLEFT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXLEFT),
                                    "aux2": packet.getEegChannelValue(IXNEeg.AUXRIGHT).isNaN ? -1e100 : packet.getEegChannelValue(IXNEeg.AUXRIGHT)]
-        //postRequestSync(json: json)
-    NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
+        NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
-    func postRequestAccelerometer(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0),
+    func postRequestAccelerometer(packet: IXNMuseDataPacket, table: String) {
+        let json: [String: Any] = ["timestamp": (packet.timestamp() ?? 0),
                                    "x": packet.getAccelerometerValue(IXNAccelerometer.X).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.X),
                                    "y": packet.getAccelerometerValue(IXNAccelerometer.Y).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Y),
-                                   "z": packet.getAccelerometerValue(IXNAccelerometer.Z).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Z),
-                                   "fb": packet.getAccelerometerValue(IXNAccelerometer.forwardBackward).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.forwardBackward),
-                                   "ud": packet.getAccelerometerValue(IXNAccelerometer.upDown).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.upDown),
-                                   "lr": packet.getAccelerometerValue(IXNAccelerometer.leftRight).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.leftRight)]
-        //postRequestSync(json: json)
+                                   "z": packet.getAccelerometerValue(IXNAccelerometer.Z).isNaN ? -1e100 : packet.getAccelerometerValue(IXNAccelerometer.Z)]
         NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
-    func postRequestGyro(packet: IXNMuseDataPacket, table: String, subject_id: Int?) {
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   "timestamp": (packet.timestamp() ?? 0),
+    func postRequestGyro(packet: IXNMuseDataPacket, table: String) {
+        let json: [String: Any] = ["timestamp": (packet.timestamp() ?? 0),
                                    "x": packet.getGyroValue(IXNGyro.X).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.X),
                                    "y": packet.getGyroValue(IXNGyro.Y).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Y),
-                                   "z": packet.getGyroValue(IXNGyro.Z).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Z),
-                                   "fb": packet.getGyroValue(IXNGyro.forwardBackward).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.forwardBackward),
-                                   "ud": packet.getGyroValue(IXNGyro.upDown).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.upDown),
-                                   "lr": packet.getGyroValue(IXNGyro.leftRight).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.leftRight)]
-        //postRequestSync(json: json)
+                                   "z": packet.getGyroValue(IXNGyro.Z).isNaN ? -1e100 : packet.getGyroValue(IXNGyro.Z)]
         NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
-    func postRequestArtifact(packet: IXNMuseArtifactPacket, table: String, subject_id: Int?) {
-        let json: [String: Any] = ["table": table,
-                                   "subject_id": subject_id,
-                                   //"timestamp": packet.timestamp, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
+    func postRequestArtifact(packet: IXNMuseArtifactPacket, table: String) {
+        let json: [String: Any] = [//"timestamp": packet.timestamp, <-- wtf docs are lying; no such thing: http://ios.choosemuse.com/interface_i_x_n_muse_artifact_packet.html
                                    "timestamp": NSDate().timeIntervalSince1970 * 1000000, // TODO precise
                                    "headband": packet.headbandOn,
                                    "blink": packet.blink,
                                    "jaw": packet.jawClench]
-        //postRequestSync(json: json)
         NetworkManager.sharedInstance.enqueueRequest(table:table, json: json)
     }
 
     func receive(_ packet: IXNMuseDataPacket?, muse: IXNMuse?) {
 
-        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute { // TODO input subject id, or const
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "alpha", subject_id: -1)
+        if packet?.packetType() == IXNMuseDataPacketType.alphaAbsolute {
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "alpha")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.betaAbsolute {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "beta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "beta")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.deltaAbsolute {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "delta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "delta")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.thetaAbsolute {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "theta", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "theta")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gammaAbsolute {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gamma", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gamma")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.isGood {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "good", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "good")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.hsiPrecision {
-            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "hsi", subject_id: -1)
+            postRequestEeg(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "hsi")
             self.signalQuality.text = NSString(format: "HSI: %.1f %.1f %.1f %.1f %.1f %.1f",
                                                packet!.getEegChannelValue(IXNEeg.EEG1),
                                                packet!.getEegChannelValue(IXNEeg.EEG2),
@@ -354,10 +336,10 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                                packet!.getEegChannelValue(IXNEeg.AUXRIGHT)) as String?
 
         } else if packet?.packetType() == IXNMuseDataPacketType.accelerometer {
-            postRequestAccelerometer(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "accelerometer", subject_id: -1)
+            postRequestAccelerometer(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "accelerometer")
 
         } else if packet?.packetType() == IXNMuseDataPacketType.gyro {
-            postRequestGyro(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gyro", subject_id: -1)
+            postRequestGyro(packet: packet as? IXNMuseDataPacket ?? IXNMuseDataPacket(), table: "gyro")
             
         } else if packet?.packetType() == IXNMuseDataPacketType.battery {
             let battery = packet?.getBatteryValue(IXNBattery.chargePercentageRemaining)
@@ -371,7 +353,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //}
         //self.isLastBlink = packet.blink
 
-        postRequestArtifact(packet: packet, table: "artifact", subject_id: -1)
+        postRequestArtifact(packet: packet, table: "artifact")
     }
     
     
