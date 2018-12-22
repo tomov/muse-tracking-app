@@ -66,7 +66,8 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                                    "accelerometer": NSMutableArray(),
                                                    "gyro": NSMutableArray(),
                                                    "artifact": NSMutableArray()]
-    
+    var semaphore = DispatchSemaphore(value: 0) // make POST requests synchronous
+
     // Declaring an object that will call the functions in SimpleController()
     var connectionController = SimpleController()
     
@@ -291,51 +292,6 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         }
     }
 
-    func testPostRequest() {
-        let url = URL(string: "http://flask-env.r3jmjqfi9f.us-east-2.elasticbeanstalk.com/log")!
-        //let url = URL(string: "http://127.0.0.1:5000/log")!
-        var request = URLRequest(url: url)
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpMethod = "POST"
- 
-		// https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
-
-        //let postString = "{\"key1\":\"shit\", \"key2\":\"fuck\"}"
-        // request.httpBody = postString.data(using: .utf8)
-
-		// https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
-		//let json: [String: Any] = ["title": "ABC",
-	    //							   "dict": ["1":"First", "2":"Second"]]	
-        let json: [String: Any] = ["table": "alpha",
-                                   "subject_id": 34,
-                                   "timestamp": 234234,
-                                   "eeg1": 123,
-                                   "eeg2": 234,
-                                   "eeg3": 345,
-                                   "eeg4": 456,
-                                   "aux1": 1000,
-                                   "aux2": 2000]
-		let jsonData = try? JSONSerialization.data(withJSONObject: json)
-		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-		request.httpBody = jsonData
-
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data, error == nil else {                                                 // check for fundamental networking error
-                print("error=\(error)")
-                return
-            }
-
-            if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {           // check for http errors
-                print("statusCode should be 200, but is \(httpStatus.statusCode)")
-                print("response = \(response)")
-            }
-
-            let responseString = String(data: data, encoding: .utf8)
-            print("responseString = \(responseString)")
-        }
-        task.resume()
-    }
-
     func postRequestSync(json: Dictionary<String, Any>) {
 		// see https://stackoverflow.com/questions/26364914/http-request-in-swift-with-post-method
 		// also https://stackoverflow.com/questions/31937686/how-to-make-http-post-request-with-json-body-in-swift
@@ -369,6 +325,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     }
 
     // Post request to remote server and on successful completion, empty array with requests
+    // note that async is a bit of a misnomer -- it is async w.r.t. the queue, but it is actually sync w.r.t. the POST request (i.e. we wait for it to complete)
     // TODO tight coupling with backgroundDequeueRequest()...
     //
     func postRequestAsync(table: String, json: Dictionary<String, Any>) -> URLSessionDataTask {
@@ -406,6 +363,7 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
 
             let responseString = String(data: data, encoding: .utf8)
             print("responseString = \(responseString)")
+            self.semaphore.signal()
 
         }
         return task
@@ -424,7 +382,12 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
                                                "rows": self.pendingJsons[table]!]
                     task = postRequestAsync(table: table, json: json) // TODO do it async
                 }
+                // Execute task out here so as not to block Muse request from queueing up
+                //
+                self.semaphore = DispatchSemaphore(value: 0) // wait for the request to complete
                 task.resume()
+                print("       ...waiting on semaphore")
+                _ = self.semaphore.wait(timeout: .distantFuture)  
                 usleep(100000) // 0.1 seconds
             }
 
