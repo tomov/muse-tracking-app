@@ -80,6 +80,13 @@
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Counts: " textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ht1-VU-fUf">
+                                <rect key="frame" x="16" y="574" width="336" height="64"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -103,6 +110,7 @@
                     </view>
                     <connections>
                         <outlet property="batteryLevel" destination="LTI-tz-2Bx" id="C1n-ff-TTv"/>
+                        <outlet property="counts" destination="ht1-VU-fUf" id="PMh-mI-v5A"/>
                         <outlet property="logView" destination="QzA-N3-63l" id="Bw0-ch-pZw"/>
                         <outlet property="signalQuality" destination="d59-sz-Soo" id="gFq-YQ-8RJ"/>
                         <outlet property="tableView" destination="guk-dB-S0Q" id="d9l-VU-Bqo"/>

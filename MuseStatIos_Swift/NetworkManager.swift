@@ -106,9 +106,12 @@ class NetworkManager: NSObject /*for @objc*/ {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
 
+        // TODO deal with duplicate data (e.g. if connection dropped but data was already sent, we'll resend it)
+        // nbd just make sure to check for duplicate utimestamps on server
         var task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {                                                 // check for fundamental networking error
                 print("error=\(error)")
+                self.semaphore.signal() // IMPORTANT! signal so it retries
                 return
             }
 
@@ -138,7 +141,8 @@ class NetworkManager: NSObject /*for @objc*/ {
                 var task = URLSessionDataTask()
                 queue.sync {
                     let count = self.pendingJsons[table]!.count
-                    //NSLog("          total # of requests: %d, address of array: %p", count, pendingJsons) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
+                    //print(" queue \(table): count \(count)")
+                    //NSLog("  queue %s: total # of requests: %d", table, count) // make sure pointer is the same (yes for NSMutableArray, NO for Array...)
                     let json: [String: Any] = ["table": table,
                                                "subject_id": 1,   // TODO const
                                                "rows": self.pendingJsons[table]!]
@@ -154,6 +158,17 @@ class NetworkManager: NSObject /*for @objc*/ {
             }
 
         }
+    }
+    
+    func getCounts() -> [Int] {
+        var counts = [Int]()
+        for (table, queue) in self.queues {
+            queue.sync {
+                let count = self.pendingJsons[table]!.count
+                counts.append(count)
+            }
+        }
+        return counts
     }
 
 

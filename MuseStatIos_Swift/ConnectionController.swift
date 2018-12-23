@@ -52,8 +52,12 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
     @IBOutlet var batteryLevel: UILabel!
     @IBOutlet var signalQuality: UILabel!
     @IBOutlet var thetas: UILabel!
+    @IBOutlet var counts: UILabel!
 
+    var lastCheckedCounts = Date()
+    
     // from https://www.raywenderlich.com/5817-background-modes-tutorial-getting-started
+    //
     var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
 
     func registerBackgroundTask() {
@@ -90,31 +94,31 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         //}
     }
     
-        override init(nibName nibNameOrNil: String!, bundle nibBundleOrNil: Bundle!) {
-            //if (self == super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)) {
-    
-            super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
-    
-            self.manager = IXNMuseManagerIos.sharedManager()
-            self.manager.museListener = self
-            self.tableView = UITableView()
-            self.logView = UITextView()
-            self.logLines = [Any]()
-            self.logView.text = ""
-            IXNLogManager.instance()?.setLogListener(self)
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd hh:mm:ss"
-            //var dateStr = dateFormatter.string(fromDate: Date()).appending(".log")
-            let dateStr = dateFormatter.string(from: Date()).appending(".log")
-            print("\(dateStr)")
-        }
-    
-        required init?(coder aDecoder: NSCoder) {
-            super.init(coder: aDecoder)
-        }
-    
-    
-    
+    override init(nibName nibNameOrNil: String!, bundle nibBundleOrNil: Bundle!) {
+        //if (self == super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)) {
+
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+
+        self.manager = IXNMuseManagerIos.sharedManager()
+        self.manager.museListener = self
+        self.tableView = UITableView()
+        self.logView = UITextView()
+        self.logLines = [Any]()
+        self.logView.text = ""
+        IXNLogManager.instance()?.setLogListener(self)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd hh:mm:ss"
+        //var dateStr = dateFormatter.string(fromDate: Date()).appending(".log")
+        let dateStr = dateFormatter.string(from: Date()).appending(".log")
+        print("\(dateStr)")
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+
+
+
     
     
     
@@ -372,6 +376,16 @@ class ConnectionController: UIViewController, IXNMuseConnectionListener, IXNMuse
         } else if packet?.packetType() == IXNMuseDataPacketType.battery {
             let battery = packet?.getBatteryValue(IXNBattery.chargePercentageRemaining)
             self.batteryLevel.text = NSString(format: "Battery level: %.1f%% remaining", battery!) as String?
+        }
+        
+        if Date().timeIntervalSince(self.lastCheckedCounts) > 1 {
+            let counts = NetworkManager.sharedInstance.getCounts()
+            var countsStr = "Counts: "
+            for count in counts {
+                countsStr += "\(count), "
+            }
+            self.counts.text = countsStr
+            self.lastCheckedCounts = Date()
         }
     }
     
